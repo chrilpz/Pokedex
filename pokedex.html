@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pokédex — Gen I–V</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --surface: #16162a;
+    --card: #1e1e38;
+    --card-hover: #252545;
+    --border: #2e2e55;
+    --accent: #e63946;
+    --accent2: #f4a261;
+    --text: #e8e8f5;
+    --text-dim: #7a7a9d;
+    --caught-glow: #4ecca3;
+    --pixel: "Press Start 2P";
+    --body: "Nunito";
+
+    /* Type colors */
+    --normal: #9a9a7a; --fire: #f08030; --water: #6890f0; --electric: #f8d030;
+    --grass: #78c850; --ice: #98d8d8; --fighting: #c03028; --poison: #a040a0;
+    --ground: #e0c068; --flying: #a890f0; --psychic: #f85888; --bug: #a8b820;
+    --rock: #b8a038; --ghost: #705898; --dragon: #7038f8; --dark: #705848;
+    --steel: #b8b8d0; --fairy: #f0b6bc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body), sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(180deg, #0d0d1a 60%, transparent);
+    padding: 14px 16px 10px;
+    backdrop-filter: blur(12px);
+  }
+
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .logo {
+    font-family: var(--pixel), monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-shadow: 0 0 20px rgba(230,57,70,0.6);
+    line-height: 1.4;
+  }
+
+  .logo span { color: var(--text-dim); font-size: 7px; display: block; margin-top: 2px; }
+
+  .stats-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .stats-pill .caught-count {
+    color: var(--caught-glow);
+    font-family: var(--pixel), monospace;
+    font-size: 9px;
+  }
+
+  /* ── SEARCH & FILTERS ── */
+  .search-bar {
+    position: relative; margin-bottom: 10px;
+  }
+
+  .search-bar input {
+    width: 100%;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 16px 11px 40px;
+    color: var(--text);
+    font-family: var(--body), sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar input:focus { border-color: var(--accent); }
+  .search-bar input::placeholder { color: var(--text-dim); }
+
+  .search-icon {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: 16px; pointer-events: none;
+  }
+
+  .filter-row {
+    display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+
+  .filter-btn {
+    flex-shrink: 0;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: var(--text-dim);
+    font-family: var(--body), sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .filter-btn.active, .filter-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .filter-btn.gen-active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* ── VIEW TOGGLE ── */
+  .view-toggle {
+    display: flex; gap: 4px; margin-left: auto;
+  }
+
+  .view-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 9px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .view-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--caught-glow), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── GRID ── */
+  .pokemon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px 12px 100px;
+  }
+
+  .pokemon-grid.list-view {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  /* ── CARD ── */
+  .poke-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 6px 8px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    user-select: none;
+  }
+
+  .poke-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+
+  .poke-card.caught {
+    border-color: var(--caught-glow);
+    background: #1a2e2a;
+  }
+
+  .poke-card.caught::before {
+    background: radial-gradient(circle at top right, rgba(78,204,163,0.08), transparent 60%);
+    opacity: 1;
+  }
+
+  .poke-card:active { transform: scale(0.95); }
+
+  .card-num {
+    font-family: var(--pixel), monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .poke-img-wrap {
+    width: 64px; height: 64px;
+    margin: 0 auto 4px;
+    position: relative;
+  }
+
+  .poke-img {
+    width: 64px; height: 64px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    transition: filter 0.2s;
+  }
+
+  .poke-card:not(.caught) .poke-img {
+    filter: brightness(0) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    opacity: 0.3;
+  }
+
+  /* CHECK BUTTON — tappable from card */
+  .check-btn {
+    position: absolute; top: 5px; right: 5px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 900;
+    z-index: 5;
+    transition: all .15s;
+    color: var(--text-dim);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+  }
+  .poke-card.caught .check-btn {
+    background: var(--caught-glow);
+    border-color: var(--caught-glow);
+    color: #0d0d1a;
+  }
+
+  .pokemon-grid.list-view .check-btn {
+    position: static;
+    margin-left: auto;
+    width: 28px; height: 28px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .poke-name {
+    font-size: 9px;
+    font-weight: 900;
+    color: var(--text);
+    text-transform: capitalize;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+
+  .poke-card:not(.caught) .poke-name { color: var(--text-dim); }
+
+  .type-tags {
+    display: flex; gap: 3px; justify-content: center; flex-wrap: wrap;
+  }
+
+  .type-tag {
+    font-size: 7px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: white;
+    opacity: 0.85;
+  }
+
+  /* ── LIST VIEW CARD ── */
+  .pokemon-grid.list-view .poke-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    text-align: left;
+    border-radius: 12px;
+  }
+
+  .pokemon-grid.list-view .poke-img-wrap {
+    width: 48px; height: 48px; margin: 0; flex-shrink: 0;
+  }
+
+  .pokemon-grid.list-view .poke-img { width: 48px; height: 48px; }
+
+  .pokemon-grid.list-view .card-info { flex: 1; }
+
+  .pokemon-grid.list-view .card-num { margin-bottom: 1px; }
+  .pokemon-grid.list-view .poke-name { font-size: 13px; margin-bottom: 4px; }
+
+
+
+
+  /* ── GEN DIVIDER ── */
+  .gen-divider {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0 2px;
+  }
+
+  .gen-label {
+    font-family: var(--pixel), monospace;
+    font-size: 8px;
+    color: var(--accent2);
+    white-space: nowrap;
+  }
+
+  .gen-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .gen-count {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ── DETAIL MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1; pointer-events: all;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 88vh;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    border-top: 2px solid var(--border);
+    overflow-y: auto;
+    transform: translateY(30px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding-bottom: 40px;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+
+  .modal-header {
+    padding: 16px 20px 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+
+  .modal-num {
+    font-family: var(--pixel), monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .modal-name {
+    font-size: 28px;
+    font-weight: 900;
+    text-transform: capitalize;
+    line-height: 1;
+  }
+
+  .modal-types { display: flex; gap: 6px; margin-top: 8px; }
+
+  .modal-type-tag {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    text-transform: uppercase; color: white;
+  }
+
+  .modal-img-wrap {
+    text-align: center; padding: 10px 0;
+    position: relative;
+  }
+
+  .modal-img {
+    width: 140px; height: 140px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .modal-img-wrap .silhouette .modal-img {
+    filter: brightness(0) opacity(0.2);
+    animation: none;
+  }
+
+  .catch-btn {
+    width: calc(100% - 32px);
+    margin: 0 16px 16px;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-family: var(--body), sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .catch-btn.not-caught {
+    background: var(--accent);
+    color: white;
+  }
+
+  .catch-btn.caught {
+    background: transparent;
+    border: 2px solid var(--caught-glow);
+    color: var(--caught-glow);
+  }
+
+  .modal-stats {
+    padding: 0 16px 8px;
+  }
+
+  .stat-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .stat-name {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-dim);
+    width: 56px; text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .stat-val {
+    font-family: var(--pixel), monospace;
+    font-size: 9px;
+    color: var(--text);
+    width: 28px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .stat-bar-wrap {
+    flex: 1; height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .modal-section-title {
+    font-family: var(--pixel), monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    padding: 12px 16px 8px;
+    letter-spacing: 1px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-state .pixel-text {
+    font-family: var(--pixel), monospace;
+    font-size: 10px;
+    margin-bottom: 12px;
+    line-height: 2;
+  }
+
+  /* ── BOTTOM SAFE ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(0deg, var(--bg) 70%, transparent);
+    padding: 16px 16px 24px;
+    display: flex; justify-content: center;
+    pointer-events: none;
+  }
+
+  .reset-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 20px;
+    color: var(--text-dim);
+    font-family: var(--body), sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    pointer-events: all;
+    transition: all 0.15s;
+  }
+
+  .reset-btn:active { transform: scale(0.95); }
+
+  /* Type bg for modal */
+  .modal-type-bg {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 180px;
+    opacity: 0.06;
+    pointer-events: none;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--caught-glow);
+    color: #0d0d1a;
+    font-weight: 900;
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      POKÉDEX
+      <span>GENERACIONES I – V</span>
+    </div>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <div class="stats-pill">
+        <span>✓</span>
+        <span class="caught-count" id="caught-display">0</span>
+        <span>/ 649</span>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="grid-btn" onclick="setView('grid')">⊞</button>
+        <button class="view-btn" id="list-btn" onclick="setView('list')">☰</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Buscar por nombre o número…" oninput="renderList()">
+  </div>
+
+  <div class="filter-row" id="filter-row">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">Todos</button>
+    <button class="filter-btn" data-filter="caught" onclick="setFilter('caught', this)">Capturados</button>
+    <button class="filter-btn" data-filter="missing" onclick="setFilter('missing', this)">Pendientes</button>
+    <button class="filter-btn" data-filter="gen1" onclick="setFilter('gen1', this)">Gen I</button>
+    <button class="filter-btn" data-filter="gen2" onclick="setFilter('gen2', this)">Gen II</button>
+    <button class="filter-btn" data-filter="gen3" onclick="setFilter('gen3', this)">Gen III</button>
+    <button class="filter-btn" data-filter="gen4" onclick="setFilter('gen4', this)">Gen IV</button>
+    <button class="filter-btn" data-filter="gen5" onclick="setFilter('gen5', this)">Gen V</button>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="pokemon-grid" id="pokemon-grid"></div>
+
+<div class="bottom-nav">
+  <button class="reset-btn" onclick="confirmReset()">↺ Reiniciar progreso</button>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div id="modal-bg" class="modal-type-bg"></div>
+    <div class="modal-header">
+      <div>
+        <span class="modal-num" id="m-num"></span>
+        <div class="modal-name" id="m-name"></div>
+        <div class="modal-types" id="m-types"></div>
+      </div>
+    </div>
+    <div class="modal-img-wrap" id="m-img-wrap">
+      <img class="modal-img" id="m-img" src="" alt="">
+    </div>
+    <button class="catch-btn" id="catch-btn" onclick="toggleFromModal()"></button>
+    <div class="modal-section-title">ESTADÍSTICAS BASE</div>
+    <div class="modal-stats" id="m-stats"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── TYPE COLORS ──
+const TYPE_COLORS = {
+  normal:'#9a9a7a', fire:'#f08030', water:'#6890f0', electric:'#f8d030',
+  grass:'#78c850', ice:'#98d8d8', fighting:'#c03028', poison:'#a040a0',
+  ground:'#e0c068', flying:'#a890f0', psychic:'#f85888', bug:'#a8b820',
+  rock:'#b8a038', ghost:'#705898', dragon:'#7038f8', dark:'#705848',
+  steel:'#b8b8d0', fairy:'#f0b6bc'
+};
+
+const STAT_COLORS = ['#f85888','#f08030','#6890f0','#78c850','#98d8d8','#f8d030'];
+const STAT_NAMES = ['HP','ATK','DEF','S.ATK','S.DEF','VEL'];
+
+// ── GEN RANGES ──
+const GENS = [
+  { name: "GENERACIÓN I — KANTO", start: 1, end: 151 },
+  { name: "GENERACIÓN II — JOHTO", start: 152, end: 251 },
+  { name: "GENERACIÓN III — HOENN", start: 252, end: 386 },
+  { name: "GENERACIÓN IV — SINNOH", start: 387, end: 493 },
+  { name: "GENERACIÓN V — UNOVA", start: 494, end: 649 }
+];
+
+// ── POKEMON DATA (name, types, stats) ──
+// Compact format: [name, type1, type2|null, hp,atk,def,spatk,spdef,spe]
+const RAW = [
+["bulbasaur","grass","poison",45,49,49,65,65,45],["ivysaur","grass","poison",60,62,63,80,80,60],["venusaur","grass","poison",80,82,83,100,100,80],["charmander","fire",null,39,52,43,60,50,65],["charmeleon","fire",null,58,64,58,80,65,80],["charizard","fire","flying",78,84,78,109,85,100],["squirtle","water",null,44,48,65,50,64,43],["wartortle","water",null,59,63,80,65,80,58],["blastoise","water",null,79,83,100,85,105,78],["caterpie","bug",null,45,30,35,20,20,45],["metapod","bug",null,50,20,55,25,25,30],["butterfree","bug","flying",60,45,50,90,80,70],["weedle","bug","poison",40,35,30,20,20,50],["kakuna","bug","poison",45,25,50,25,25,35],["beedrill","bug","poison",65,90,40,45,80,75],["pidgey","normal","flying",40,45,40,35,35,56],["pidgeotto","normal","flying",63,60,55,50,50,71],["pidgeot","normal","flying",83,80,75,70,70,101],["rattata","normal",null,30,56,35,25,35,72],["raticate","normal",null,55,81,60,50,70,97],["spearow","normal","flying",40,60,30,31,31,70],["fearow","normal","flying",65,90,65,61,61,100],["ekans","poison",null,35,60,44,40,54,55],["arbok","poison",null,60,95,69,65,79,80],["pikachu","electric",null,35,55,40,50,50,90],["raichu","electric",null,60,90,55,90,80,110],["sandshrew","ground",null,50,75,85,20,30,40],["sandslash","ground",null,75,100,110,45,55,65],["nidoran-f","poison",null,55,47,52,40,40,41],["nidorina","poison",null,70,62,67,55,55,56],["nidoqueen","poison","ground",90,92,87,75,85,76],["nidoran-m","poison",null,46,57,40,40,40,50],["nidorino","poison",null,61,72,57,55,55,65],["nidoking","poison","ground",81,102,77,85,75,85],["clefairy","fairy",null,70,45,48,60,65,35],["clefable","fairy",null,95,70,73,95,90,60],["vulpix","fire",null,38,41,40,50,65,65],["ninetales","fire",null,73,76,75,81,100,100],["jigglypuff","normal","fairy",115,45,20,45,25,20],["wigglytuff","normal","fairy",140,70,45,85,50,45],["zubat","poison","flying",40,45,35,30,40,55],["golbat","poison","flying",75,80,70,65,75,90],["oddish","grass","poison",45,50,55,75,65,30],["gloom","grass","poison",60,65,70,85,75,40],["vileplume","grass","poison",75,80,85,110,90,50],["paras","bug","grass",35,70,55,45,55,25],["parasect","bug","grass",60,95,80,60,80,30],["venonat","bug","poison",60,55,50,40,55,45],["venomoth","bug","poison",70,65,60,90,75,90],["diglett","ground",null,10,55,25,35,45,95],["dugtrio","ground",null,35,100,50,50,70,120],["meowth","normal",null,40,45,35,40,40,90],["persian","normal",null,65,70,60,65,65,115],["psyduck","water",null,50,52,48,65,50,55],["golduck","water",null,80,82,78,95,80,85],["mankey","fighting",null,40,80,35,35,45,70],["primeape","fighting",null,65,105,60,60,70,95],["growlithe","fire",null,55,70,45,70,50,60],["arcanine","fire",null,90,110,80,100,80,95],["poliwag","water",null,40,50,40,40,40,90],["poliwhirl","water",null,65,65,65,50,50,90],["poliwrath","water","fighting",90,95,95,70,90,70],["abra","psychic",null,25,20,15,105,55,90],["kadabra","psychic",null,40,35,30,120,70,105],["alakazam","psychic",null,55,50,45,135,95,120],["machop","fighting",null,70,80,50,35,35,35],["machoke","fighting",null,80,100,70,50,60,45],["machamp","fighting",null,90,130,80,65,85,55],["bellsprout","grass","poison",50,75,35,70,30,40],["weepinbell","grass","poison",65,90,50,85,45,55],["victreebel","grass","poison",80,105,65,100,70,70],["tentacool","water","poison",40,40,35,50,100,70],["tentacruel","water","poison",80,70,65,80,120,100],["geodude","rock","ground",40,80,100,30,30,20],["graveler","rock","ground",55,95,115,45,45,35],["golem","rock","ground",80,120,130,55,65,45],["ponyta","fire",null,50,85,55,65,65,90],["rapidash","fire",null,65,100,70,80,80,105],["slowpoke","water","psychic",90,65,65,40,40,15],["slowbro","water","psychic",95,75,110,100,80,30],["magnemite","electric","steel",25,35,70,95,55,45],["magneton","electric","steel",50,60,95,120,70,70],["farfetchd","normal","flying",52,90,55,58,62,60],["doduo","normal","flying",35,85,45,35,35,75],["dodrio","normal","flying",60,110,70,60,60,100],["seel","water",null,65,45,55,45,70,45],["dewgong","water","ice",90,70,80,70,95,70],["grimer","poison",null,80,80,50,40,50,25],["muk","poison",null,105,105,75,65,100,50],["shellder","water",null,30,65,100,45,25,40],["cloyster","water","ice",50,95,180,85,45,70],["gastly","ghost","poison",30,35,30,100,35,80],["haunter","ghost","poison",45,50,45,115,55,95],["gengar","ghost","poison",60,65,60,130,75,110],["onix","rock","ground",35,45,160,30,45,70],["drowzee","psychic",null,60,48,45,43,90,42],["hypno","psychic",null,85,73,70,73,115,67],["krabby","water",null,30,105,90,25,25,50],["kingler","water",null,55,130,115,50,50,75],["voltorb","electric",null,40,30,50,55,55,100],["electrode","electric",null,60,50,70,80,80,140],["exeggcute","grass","psychic",60,40,80,60,45,40],["exeggutor","grass","psychic",95,95,85,125,65,55],["cubone","ground",null,50,50,95,40,50,35],["marowak","ground",null,60,80,110,50,80,45],["hitmonlee","fighting",null,50,120,53,35,110,87],["hitmonchan","fighting",null,50,105,79,35,110,76],["lickitung","normal",null,90,55,75,60,75,30],["koffing","poison",null,40,65,95,60,45,35],["weezing","poison",null,65,90,120,85,70,60],["rhyhorn","ground","rock",80,85,95,30,30,25],["rhydon","ground","rock",105,130,120,45,45,40],["chansey","normal",null,250,5,5,35,105,50],["tangela","grass",null,65,55,115,100,40,60],["kangaskhan","normal",null,105,95,80,40,80,90],["horsea","water",null,30,40,70,70,25,60],["seadra","water",null,55,65,95,95,45,85],["goldeen","water",null,45,67,60,35,50,63],["seaking","water",null,80,92,65,65,80,68],["staryu","water",null,30,45,55,70,55,85],["starmie","water","psychic",60,75,85,100,85,115],["mr-mime","psychic","fairy",40,45,65,100,120,90],["scyther","bug","flying",70,110,80,55,80,105],["jynx","ice","psychic",65,50,35,115,95,95],["electabuzz","electric",null,65,83,57,95,85,105],["magmar","fire",null,65,95,57,100,85,93],["pinsir","bug",null,65,125,100,55,70,85],["tauros","normal",null,75,100,95,40,70,110],["magikarp","water",null,20,10,55,15,20,80],["gyarados","water","flying",95,125,79,60,100,81],["lapras","water","ice",130,85,80,85,95,60],["ditto","normal",null,48,48,48,48,48,48],["eevee","normal",null,55,55,50,45,65,55],["vaporeon","water",null,130,65,60,110,95,65],["jolteon","electric",null,65,65,60,110,95,130],["flareon","fire",null,65,130,60,95,110,65],["porygon","normal",null,65,60,70,85,75,40],["omanyte","rock","water",35,40,100,90,55,35],["omastar","rock","water",70,60,125,115,70,55],["kabuto","rock","water",30,80,90,55,45,55],["kabutops","rock","water",60,115,105,65,70,80],["aerodactyl","rock","flying",80,105,65,60,75,130],["snorlax","normal",null,160,110,65,65,110,30],["articuno","ice","flying",90,85,100,95,125,85],["zapdos","electric","flying",90,90,85,125,90,100],["moltres","fire","flying",90,100,90,125,85,90],["dratini","dragon",null,41,64,45,50,50,50],["dragonair","dragon",null,61,84,65,70,70,70],["dragonite","dragon","flying",91,134,95,100,100,80],["mewtwo","psychic",null,106,110,90,154,90,130],["mew","psychic",null,100,100,100,100,100,100],
+// GEN 2
+["chikorita","grass",null,45,49,65,49,65,45],["bayleef","grass",null,60,62,80,63,80,60],["meganium","grass",null,80,82,100,83,100,80],["cyndaquil","fire",null,39,52,43,60,50,65],["quilava","fire",null,58,64,58,80,65,80],["typhlosion","fire",null,78,84,78,109,85,100],["totodile","water",null,50,65,64,44,48,43],["croconaw","water",null,65,80,80,59,63,58],["feraligatr","water",null,85,105,100,79,83,78],["sentret","normal",null,35,46,34,35,45,20],["furret","normal",null,85,76,64,45,55,90],["hoothoot","normal","flying",60,30,30,36,56,50],["noctowl","normal","flying",100,50,50,76,96,70],["ledyba","bug","flying",40,20,30,40,80,55],["ledian","bug","flying",55,35,50,55,110,85],["spinarak","bug","poison",40,60,40,40,40,30],["ariados","bug","poison",70,90,70,60,70,40],["crobat","poison","flying",85,90,80,70,80,130],["chinchou","water","electric",75,38,38,56,56,67],["lanturn","water","electric",125,58,58,76,76,67],["pichu","electric",null,20,40,15,35,35,60],["cleffa","fairy",null,50,25,28,45,55,15],["igglybuff","normal","fairy",90,30,15,40,20,15],["togepi","fairy",null,35,20,65,40,65,20],["togetic","fairy","flying",55,40,85,80,105,40],["natu","psychic","flying",40,50,45,70,45,70],["xatu","psychic","flying",65,75,70,95,70,95],["mareep","electric",null,55,40,40,65,45,35],["flaaffy","electric",null,70,55,55,80,60,45],["ampharos","electric",null,90,75,85,115,90,55],["bellossom","grass",null,75,80,95,90,100,50],["marill","water","fairy",70,20,50,20,50,40],["azumarill","water","fairy",100,50,80,60,80,50],["sudowoodo","rock",null,70,100,115,30,65,30],["politoed","water",null,90,75,75,90,100,70],["hoppip","grass","flying",35,35,40,35,55,50],["skiploom","grass","flying",55,45,50,45,65,80],["jumpluff","grass","flying",75,55,70,55,95,110],["aipom","normal",null,55,70,55,40,55,85],["sunkern","grass",null,30,30,30,30,30,30],["sunflora","grass",null,75,75,55,105,85,30],["yanma","bug","flying",65,65,45,75,45,95],["wooper","water","ground",55,45,45,25,25,15],["quagsire","water","ground",95,85,85,65,65,35],["espeon","psychic",null,65,65,60,130,95,110],["umbreon","dark",null,95,65,110,60,130,65],["murkrow","dark","flying",60,85,42,85,42,91],["slowking","water","psychic",95,75,80,100,110,30],["misdreavus","ghost",null,60,60,60,85,85,85],["unown","psychic",null,48,72,48,72,48,48],["wobbuffet","psychic",null,190,33,58,33,58,33],["girafarig","normal","psychic",70,80,65,90,65,85],["pineco","bug",null,50,65,90,35,35,15],["forretress","bug","steel",75,90,140,60,60,40],["dunsparce","normal",null,100,70,70,65,65,45],["gligar","ground","flying",65,75,105,35,65,85],["steelix","steel","ground",75,85,200,55,65,30],["snubbull","fairy",null,60,80,50,40,40,30],["granbull","fairy",null,90,120,75,60,60,45],["qwilfish","water","poison",65,95,85,55,55,85],["scizor","bug","steel",70,130,100,55,80,65],["shuckle","bug","rock",20,10,230,10,230,5],["heracross","bug","fighting",80,125,75,40,95,85],["sneasel","dark","ice",55,95,55,35,75,115],["teddiursa","normal",null,60,80,50,50,50,40],["ursaring","normal",null,90,130,75,75,75,55],["slugma","fire",null,40,40,40,70,40,20],["magcargo","fire","rock",50,50,120,80,80,30],["swinub","ice","ground",50,50,40,30,30,50],["piloswine","ice","ground",100,100,80,60,60,50],["corsola","water","rock",65,55,95,65,95,35],["remoraid","water",null,35,65,35,65,35,65],["octillery","water",null,75,105,75,105,75,45],["delibird","ice","flying",45,55,45,65,45,75],["mantine","water","flying",65,40,70,80,140,70],["skarmory","steel","flying",65,80,140,40,70,70],["houndour","dark","fire",45,60,30,80,50,65],["houndoom","dark","fire",75,90,50,110,80,95],["kingdra","water","dragon",75,95,95,95,95,85],["phanpy","ground",null,90,60,60,40,40,40],["donphan","ground",null,90,120,120,60,60,50],["porygon2","normal",null,85,80,90,105,95,60],["stantler","normal",null,73,95,62,85,65,85],["smeargle","normal",null,55,20,35,20,45,75],["tyrogue","fighting",null,35,35,35,35,35,35],["hitmontop","fighting",null,50,95,95,35,110,70],["smoochum","ice","psychic",45,30,15,85,65,65],["elekid","electric",null,45,63,37,65,55,95],["magby","fire",null,45,75,37,70,55,83],["miltank","normal",null,95,80,105,40,70,100],["blissey","normal",null,255,10,10,75,135,55],["raikou","electric",null,90,85,75,115,100,115],["entei","fire",null,115,115,85,90,75,100],["suicune","water",null,100,75,115,90,115,85],["larvitar","rock","ground",50,64,50,45,50,41],["pupitar","rock","ground",70,84,70,65,70,51],["tyranitar","rock","dark",100,134,110,95,100,61],["lugia","psychic","flying",106,90,130,90,154,110],["ho-oh","fire","flying",106,130,90,110,154,90],["celebi","psychic","grass",100,100,100,100,100,100],
+// GEN 3
+["treecko","grass",null,40,45,35,65,55,70],["grovyle","grass",null,50,65,45,85,65,95],["sceptile","grass",null,70,85,65,105,85,120],["torchic","fire",null,45,60,40,70,50,45],["combusken","fire","fighting",60,85,60,85,60,55],["blaziken","fire","fighting",80,120,70,110,70,80],["mudkip","water",null,50,70,50,50,50,40],["marshtomp","water","ground",70,85,70,60,70,50],["swampert","water","ground",100,110,90,85,90,60],["poochyena","dark",null,35,55,35,30,30,35],["mightyena","dark",null,70,90,70,60,60,70],["zigzagoon","normal",null,38,30,41,30,41,60],["linoone","normal",null,78,70,61,50,61,100],["wurmple","bug",null,45,45,35,20,30,20],["silcoon","bug",null,50,35,55,25,25,15],["beautifly","bug","flying",60,70,50,100,50,65],["cascoon","bug",null,50,35,55,25,25,15],["dustox","bug","poison",60,50,70,50,90,65],["lotad","water","grass",40,30,30,40,50,30],["lombre","water","grass",60,50,50,60,70,50],["ludicolo","water","grass",80,70,70,90,100,70],["seedot","grass",null,40,40,50,30,30,30],["nuzleaf","grass","dark",70,70,40,60,40,60],["shiftry","grass","dark",90,100,60,90,60,80],["taillow","normal","flying",40,55,30,30,30,85],["swellow","normal","flying",60,85,60,75,50,125],["wingull","water","flying",40,30,30,55,30,85],["pelipper","water","flying",60,50,100,95,70,65],["ralts","psychic","fairy",28,25,25,45,35,40],["kirlia","psychic","fairy",38,35,35,65,55,50],["gardevoir","psychic","fairy",68,65,65,125,115,80],["surskit","bug","water",40,30,32,50,52,65],["masquerain","bug","flying",70,60,62,100,82,60],["shroomish","grass",null,60,40,60,40,60,35],["breloom","grass","fighting",60,130,80,60,60,70],["slakoth","normal",null,60,60,60,35,35,30],["vigoroth","normal",null,80,80,80,55,55,90],["slaking","normal",null,150,160,100,95,65,100],["nincada","bug","ground",31,45,90,30,30,40],["ninjask","bug","flying",61,90,45,50,50,160],["shedinja","bug","ghost",1,90,45,30,30,40],["whismur","normal",null,64,51,23,51,23,28],["loudred","normal",null,84,71,43,71,43,48],["exploud","normal",null,104,91,63,91,73,68],["makuhita","fighting",null,72,60,30,20,30,25],["hariyama","fighting",null,144,120,60,40,60,50],["azurill","normal","fairy",50,20,40,20,40,20],["nosepass","rock",null,30,45,135,45,90,30],["skitty","normal",null,50,45,45,35,35,50],["delcatty","normal",null,70,65,65,55,55,70],["sableye","dark","ghost",50,75,75,65,65,50],["mawile","steel","fairy",50,85,85,55,55,50],["aron","steel","rock",50,70,100,40,40,30],["lairon","steel","rock",60,90,140,50,50,40],["aggron","steel","rock",70,110,180,60,60,50],["meditite","fighting","psychic",30,40,55,40,55,60],["medicham","fighting","psychic",60,60,75,60,75,80],["electrike","electric",null,40,45,40,65,40,65],["manectric","electric",null,70,75,60,105,60,105],["plusle","electric",null,60,50,40,85,75,95],["minun","electric",null,60,40,50,75,85,95],["volbeat","bug",null,65,73,75,47,85,85],["illumise","bug",null,65,47,75,73,85,85],["roselia","grass","poison",50,60,45,100,80,65],["gulpin","poison",null,70,43,53,43,53,40],["swalot","poison",null,100,73,83,73,83,55],["carvanha","water","dark",45,90,20,65,20,65],["sharpedo","water","dark",70,120,40,95,40,95],["wailmer","water",null,130,70,35,70,35,60],["wailord","water",null,170,90,45,90,45,60],["numel","fire","ground",60,60,40,65,45,35],["camerupt","fire","ground",70,100,70,105,75,40],["torkoal","fire",null,70,85,140,85,70,20],["spoink","psychic",null,60,25,35,70,80,60],["grumpig","psychic",null,80,45,65,90,110,80],["spinda","normal",null,60,60,60,60,60,60],["trapinch","ground",null,45,100,45,45,45,10],["vibrava","ground","dragon",50,70,50,50,50,70],["flygon","ground","dragon",80,100,80,80,80,100],["cacnea","grass",null,50,85,40,85,40,35],["cacturne","grass","dark",70,115,60,115,60,55],["swablu","normal","flying",45,40,60,40,75,50],["altaria","dragon","flying",75,70,90,70,105,80],["zangoose","normal",null,73,115,60,60,60,90],["seviper","poison",null,73,100,60,100,60,65],["lunatone","rock","psychic",70,55,65,95,85,70],["solrock","rock","psychic",70,95,85,55,65,70],["barboach","water","ground",50,48,43,46,41,60],["whiscash","water","ground",110,78,73,76,71,60],["corphish","water",null,43,80,65,50,35,35],["crawdaunt","water","dark",63,120,85,90,55,55],["baltoy","ground","psychic",40,40,55,40,70,55],["claydol","ground","psychic",60,70,105,70,120,75],["lileep","rock","grass",66,41,77,61,87,23],["cradily","rock","grass",86,81,97,81,107,43],["anorith","rock","bug",45,95,50,40,50,75],["armaldo","rock","bug",75,125,100,70,80,45],["feebas","water",null,20,15,20,10,55,80],["milotic","water",null,95,60,79,100,125,81],["castform","normal",null,70,70,70,70,70,70],["kecleon","normal",null,60,90,70,60,120,40],["shuppet","ghost",null,44,75,35,63,33,45],["banette","ghost",null,64,115,65,83,63,65],["duskull","ghost",null,20,40,90,30,90,25],["dusclops","ghost",null,40,70,130,60,130,25],["tropius","grass","flying",99,68,83,72,87,51],["chimecho","psychic",null,65,50,70,95,80,65],["absol","dark",null,65,130,60,75,60,75],["wynaut","psychic",null,95,23,48,23,48,23],["snorunt","ice",null,50,50,50,50,50,50],["glalie","ice",null,80,80,80,80,80,80],["spheal","ice","water",70,40,50,55,50,25],["sealeo","ice","water",90,60,70,75,70,45],["walrein","ice","water",110,80,90,95,90,65],["clamperl","water",null,35,64,85,74,55,32],["huntail","water",null,55,104,105,94,75,52],["gorebyss","water",null,55,84,105,114,75,52],["relicanth","water","rock",100,90,130,45,65,55],["luvdisc","water",null,43,30,55,40,65,97],["bagon","dragon",null,45,75,60,40,30,50],["shelgon","dragon",null,65,95,100,60,50,50],["salamence","dragon","flying",95,135,80,110,80,100],["beldum","steel","psychic",40,55,80,35,60,30],["metang","steel","psychic",60,75,100,55,80,50],["metagross","steel","psychic",80,135,130,95,90,70],["regirock","rock",null,80,100,200,50,100,50],["regice","ice",null,80,50,100,100,200,50],["registeel","steel",null,80,75,150,75,150,50],["latias","dragon","psychic",80,80,90,110,130,110],["latios","dragon","psychic",80,90,80,130,110,110],["kyogre","water",null,100,100,90,150,140,90],["groudon","ground",null,100,150,140,100,90,90],["rayquaza","dragon","flying",105,150,90,150,90,95],["jirachi","steel","psychic",100,100,100,100,100,100],["deoxys","psychic",null,50,150,50,150,50,150],
+// GEN 4
+["turtwig","grass",null,55,68,64,45,55,31],["grotle","grass",null,75,89,85,55,65,36],["torterra","grass","ground",95,109,105,75,85,56],["chimchar","fire",null,44,58,44,58,44,61],["monferno","fire","fighting",64,78,52,78,52,81],["infernape","fire","fighting",76,104,71,104,71,108],["piplup","water",null,53,51,53,61,56,40],["prinplup","water",null,64,66,68,81,76,50],["empoleon","water","steel",84,86,88,111,101,60],["starly","normal","flying",40,55,30,30,30,60],["staravia","normal","flying",55,75,50,40,40,80],["staraptor","normal","flying",85,120,70,50,60,100],["bidoof","normal",null,59,45,40,35,40,31],["bibarel","normal","water",79,85,60,55,60,71],["kricketot","bug",null,37,25,41,25,41,25],["kricketune","bug",null,77,85,51,55,51,65],["shinx","electric",null,45,65,34,40,34,45],["luxio","electric",null,60,85,49,60,49,60],["luxray","electric",null,80,120,79,95,79,70],["budew","grass","poison",40,30,35,50,70,55],["roserade","grass","poison",60,70,65,125,105,90],["cranidos","rock",null,67,125,40,30,30,58],["rampardos","rock",null,97,165,60,65,50,58],["shieldon","rock","steel",30,42,118,42,88,30],["bastiodon","rock","steel",60,52,168,47,138,30],["burmy","bug",null,40,29,45,29,45,36],["wormadam","bug","grass",60,59,85,79,105,36],["mothim","bug","flying",70,94,50,94,50,66],["combee","bug","flying",30,30,42,30,42,70],["vespiquen","bug","flying",70,80,102,80,102,40],["pachirisu","electric",null,60,45,70,45,90,95],["buizel","water",null,55,65,35,60,30,85],["floatzel","water",null,85,105,55,85,50,115],["cherubi","grass",null,45,35,45,62,53,35],["cherrim","grass",null,70,60,70,87,78,85],["shellos","water",null,76,48,48,57,62,34],["gastrodon","water","ground",111,83,68,92,82,39],["ambipom","normal",null,75,100,66,60,66,115],["drifloon","ghost","flying",90,50,34,60,44,70],["drifblim","ghost","flying",150,80,44,90,54,80],["buneary","normal",null,55,66,44,44,56,85],["lopunny","normal",null,65,76,84,54,96,105],["mismagius","ghost",null,60,60,60,105,105,105],["honchkrow","dark","flying",100,125,52,105,52,71],["glameow","normal",null,49,55,42,42,37,85],["purugly","normal",null,71,82,64,64,59,112],["chingling","psychic",null,45,30,50,65,50,45],["stunky","poison","dark",63,63,47,41,41,74],["skuntank","poison","dark",103,93,67,71,61,84],["bronzor","steel","psychic",57,24,86,24,86,23],["bronzong","steel","psychic",67,89,116,79,116,33],["bonsly","rock",null,50,80,95,10,45,10],["mime-jr","psychic","fairy",20,25,45,70,90,60],["happiny","normal",null,100,5,5,15,65,30],["chatot","normal","flying",76,65,45,92,42,91],["spiritomb","ghost","dark",50,92,108,92,108,35],["gible","dragon","ground",58,70,45,40,45,42],["gabite","dragon","ground",68,90,65,50,55,82],["garchomp","dragon","ground",108,130,95,80,85,102],["munchlax","normal",null,135,85,40,40,85,5],["riolu","fighting",null,40,70,40,35,40,60],["lucario","fighting","steel",70,110,70,115,70,90],["hippopotas","ground",null,68,72,78,38,42,32],["hippowdon","ground",null,108,112,118,68,72,47],["skorupi","poison","bug",40,50,90,30,55,65],["drapion","poison","dark",70,90,110,60,75,95],["croagunk","poison","fighting",48,61,40,61,40,50],["toxicroak","poison","fighting",83,106,65,86,65,85],["carnivine","grass",null,74,100,72,90,72,46],["finneon","water",null,49,49,56,49,61,66],["lumineon","water",null,69,69,76,69,86,91],["mantyke","water","flying",45,20,50,60,120,50],["snover","grass","ice",60,62,50,62,60,40],["abomasnow","grass","ice",90,92,75,92,85,60],["weavile","dark","ice",70,120,65,45,85,125],["magnezone","electric","steel",70,70,115,130,90,60],["lickilicky","normal",null,110,85,95,80,95,50],["rhyperior","ground","rock",115,140,130,55,55,40],["tangrowth","grass",null,100,100,125,110,50,50],["electivire","electric",null,75,123,67,95,85,95],["magmortar","fire",null,75,95,67,125,95,83],["togekiss","fairy","flying",85,50,95,120,115,80],["yanmega","bug","flying",86,76,86,116,56,95],["leafeon","grass",null,65,110,130,60,65,95],["glaceon","ice",null,65,60,110,130,95,65],["gliscor","ground","flying",75,95,125,45,75,95],["mamoswine","ice","ground",110,130,80,70,60,80],["porygon-z","normal",null,85,80,70,135,75,90],["gallade","psychic","fighting",68,125,65,65,115,80],["probopass","rock","steel",60,55,145,75,150,40],["dusknoir","ghost",null,45,100,135,65,135,45],["froslass","ice","ghost",70,80,70,80,70,110],["rotom","electric","ghost",50,50,77,95,77,91],["uxie","psychic",null,75,75,130,75,130,95],["mesprit","psychic",null,80,105,105,105,105,80],["azelf","psychic",null,75,125,70,125,70,115],["dialga","steel","dragon",100,120,120,150,100,90],["palkia","water","dragon",90,120,100,150,120,100],["heatran","fire","steel",91,90,106,130,106,77],["regigigas","normal",null,110,160,110,80,110,100],["giratina","ghost","dragon",150,100,120,100,120,90],["cresselia","psychic",null,120,70,120,75,130,85],["phione","water",null,80,80,80,80,80,80],["manaphy","water",null,100,100,100,100,100,100],["darkrai","dark",null,70,90,90,135,90,125],["shaymin","grass",null,100,100,100,100,100,100],["arceus","normal",null,120,120,120,120,120,120],
+// GEN 5
+["victini","psychic","fire",100,100,100,100,100,100],["snivy","grass",null,45,45,55,45,55,63],["servine","grass",null,60,60,75,60,75,83],["serperior","grass",null,75,75,95,75,95,113],["tepig","fire",null,65,63,45,45,45,45],["pignite","fire","fighting",90,93,55,70,55,55],["emboar","fire","fighting",110,123,65,100,65,65],["oshawott","water",null,55,55,45,63,45,45],["dewott","water",null,75,75,60,83,60,60],["samurott","water",null,95,100,85,108,70,70],["patrat","normal",null,45,55,39,35,39,42],["watchog","normal",null,60,85,69,60,69,77],["lillipup","normal",null,45,60,45,25,45,55],["herdier","normal",null,65,80,65,35,65,60],["stoutland","normal",null,85,110,90,45,90,80],["purrloin","dark",null,41,50,37,50,37,66],["liepard","dark",null,64,88,50,88,50,106],["pansage","grass",null,50,53,48,53,48,64],["simisage","grass",null,75,98,63,98,63,101],["pansear","fire",null,50,53,48,53,48,64],["simisear","fire",null,75,98,63,98,63,101],["panpour","water",null,50,53,48,53,48,64],["simipour","water",null,75,98,63,98,63,101],["munna","psychic",null,76,25,45,67,55,24],["musharna","psychic",null,116,55,85,107,95,29],["pidove","normal","flying",50,55,50,36,30,43],["tranquill","normal","flying",62,77,62,50,42,65],["unfezant","normal","flying",80,115,80,65,55,93],["blitzle","electric",null,45,60,32,50,32,76],["zebstrika","electric",null,75,100,63,80,63,116],["roggenrola","rock",null,55,75,85,25,25,15],["boldore","rock",null,70,105,105,50,40,20],["gigalith","rock",null,85,135,130,60,80,25],["woobat","psychic","flying",55,45,43,55,43,72],["swoobat","psychic","flying",67,57,55,77,55,114],["drilbur","ground",null,60,85,40,30,45,68],["excadrill","ground","steel",110,135,60,50,65,88],["audino","normal",null,103,60,86,60,86,50],["timburr","fighting",null,75,80,55,25,35,35],["gurdurr","fighting",null,85,105,85,40,50,40],["conkeldurr","fighting",null,105,140,95,55,65,45],["tympole","water",null,50,50,40,50,40,64],["palpitoad","water","ground",75,65,55,65,55,69],["seismitoad","water","ground",105,95,75,85,75,74],["throh","fighting",null,120,100,85,30,85,45],["sawk","fighting",null,75,125,75,30,75,85],["sewaddle","bug","grass",45,53,70,40,60,42],["swadloon","bug","grass",55,63,90,50,80,42],["leavanny","bug","grass",75,103,80,70,80,92],["venipede","bug","poison",30,45,59,30,39,57],["whirlipede","bug","poison",40,55,99,40,79,47],["scolipede","bug","poison",60,100,89,55,69,112],["cottonee","grass","fairy",40,27,60,37,50,66],["whimsicott","grass","fairy",60,67,85,77,75,116],["petilil","grass",null,45,35,50,70,50,30],["lilligant","grass",null,70,60,75,110,75,90],["basculin","water",null,70,92,65,80,55,98],["sandile","ground","dark",50,72,35,35,35,65],["krokorok","ground","dark",60,82,45,45,45,74],["krookodile","ground","dark",95,117,80,65,70,92],["darumaka","fire",null,70,90,45,15,45,50],["darmanitan","fire",null,105,140,55,30,55,95],["maractus","grass",null,75,86,67,106,67,60],["dwebble","bug","rock",50,65,85,35,35,55],["crustle","bug","rock",70,95,125,65,75,45],["scraggy","dark","fighting",50,75,70,35,70,48],["scrafty","dark","fighting",65,90,115,45,115,58],["sigilyph","psychic","flying",72,58,80,103,80,97],["yamask","ghost",null,38,30,85,55,65,30],["cofagrigus","ghost",null,58,50,145,95,105,30],["tirtouga","water","rock",54,78,103,53,45,22],["carracosta","water","rock",74,108,133,83,65,32],["archen","rock","flying",55,112,45,74,45,70],["archeops","rock","flying",75,140,65,112,65,110],["trubbish","poison",null,50,50,62,40,62,65],["garbodor","poison",null,80,95,82,60,82,75],["zorua","dark",null,40,65,40,80,40,65],["zoroark","dark",null,60,105,60,120,60,105],["minccino","normal",null,55,50,40,40,40,75],["cinccino","normal",null,75,95,60,65,60,115],["gothita","psychic",null,45,30,50,55,65,45],["gothorita","psychic",null,60,45,70,75,85,55],["gothitelle","psychic",null,70,55,95,95,110,65],["solosis","psychic",null,45,30,40,105,50,20],["duosion","psychic",null,65,40,50,125,60,30],["reuniclus","psychic",null,110,65,75,125,85,30],["ducklett","water","flying",62,44,50,44,50,55],["swanna","water","flying",75,87,63,87,63,98],["vanillite","ice",null,36,50,50,65,60,44],["vanillish","ice",null,51,65,65,80,75,59],["vanilluxe","ice",null,71,95,85,110,95,79],["deerling","normal","grass",60,60,50,40,50,75],["sawsbuck","normal","grass",80,100,70,60,70,95],["emolga","electric","flying",55,75,60,75,60,103],["karrablast","bug",null,50,75,45,40,45,60],["escavalier","bug","steel",70,135,105,60,105,20],["foongus","grass","poison",69,55,45,55,55,15],["amoonguss","grass","poison",114,85,70,85,80,30],["frillish","water","ghost",55,40,50,65,85,40],["jellicent","water","ghost",100,60,70,85,105,60],["alomomola","water",null,165,75,80,40,45,65],["joltik","bug","electric",50,47,50,57,50,65],["galvantula","bug","electric",70,77,60,97,60,108],["ferroseed","grass","steel",44,50,91,24,86,10],["ferrothorn","grass","steel",74,94,131,54,116,20],["klink","steel",null,40,55,70,45,60,30],["klang","steel",null,60,80,95,70,85,50],["klinklang","steel",null,60,100,115,70,85,90],["tynamo","electric",null,35,55,40,45,40,60],["eelektrik","electric",null,65,85,70,75,70,40],["eelektross","electric",null,85,115,80,105,80,50],["elgyem","psychic",null,55,55,55,85,55,30],["beheeyem","psychic",null,75,75,75,125,95,40],["litwick","ghost","fire",50,30,55,65,55,20],["lampent","ghost","fire",60,40,60,95,60,55],["chandelure","ghost","fire",60,55,90,145,90,80],["axew","dragon",null,46,87,60,30,40,57],["fraxure","dragon",null,66,117,70,40,50,67],["haxorus","dragon",null,76,147,90,60,70,97],["cubchoo","ice",null,55,70,40,60,40,40],["beartic","ice",null,95,110,80,70,80,50],["cryogonal","ice",null,70,50,30,95,135,105],["shelmet","bug",null,50,40,85,40,65,25],["accelgor","bug",null,80,70,40,100,60,145],["stunfisk","ground","electric",109,66,84,81,99,32],["mienfoo","fighting",null,45,85,50,55,50,65],["mienshao","fighting",null,65,125,60,95,60,105],["druddigon","dragon",null,77,120,90,60,90,48],["golett","ground","ghost",59,74,50,35,50,35],["golurk","ground","ghost",89,124,80,55,80,55],["pawniard","dark","steel",45,85,70,40,40,60],["bisharp","dark","steel",65,125,100,60,70,70],["bouffalant","normal",null,95,110,95,40,95,55],["rufflet","normal","flying",70,83,50,37,50,60],["braviary","normal","flying",100,123,75,57,75,80],["vullaby","dark","flying",70,55,75,45,65,60],["mandibuzz","dark","flying",110,65,105,55,95,80],["heatmor","fire",null,85,97,66,105,66,65],["durant","bug","steel",58,109,112,48,48,109],["deino","dark","dragon",52,65,50,45,50,38],["zweilous","dark","dragon",72,85,70,65,70,58],["hydreigon","dark","dragon",92,105,90,125,90,98],["larvesta","bug","fire",55,85,55,50,55,60],["volcarona","bug","fire",85,60,65,135,105,100],["cobalion","steel","fighting",91,90,129,90,72,108],["terrakion","rock","fighting",91,129,90,72,90,108],["virizion","grass","fighting",91,90,72,90,129,108],["tornadus","flying",null,79,115,70,125,80,111],["thundurus","electric","flying",79,115,70,125,80,111],["reshiram","dragon","fire",100,120,100,150,120,90],["zekrom","dragon","electric",100,150,120,120,100,90],["landorus","ground","flying",89,125,90,115,80,101],["kyurem","dragon","ice",125,130,90,130,90,95],["keldeo","water","fighting",91,72,90,129,90,108],["meloetta","normal","psychic",100,77,77,128,128,90],["genesect","bug","steel",71,120,95,120,95,99]
+];
+
+// Build pokemon array
+const POKEMON = RAW.map((r, i) => ({
+  id: i + 1,
+  name: r[0],
+  type1: r[1],
+  type2: r[2],
+  stats: { hp: r[3], atk: r[4], def: r[5], spatk: r[6], spdef: r[7], spe: r[8] }
+}));
+
+function getGen(id) {
+  if (id <= 151) return 1;
+  if (id <= 251) return 2;
+  if (id <= 386) return 3;
+  if (id <= 493) return 4;
+  return 5;
+}
+
+function spriteUrl(id) {
+  return `https://img.pokemondb.net/sprites/black-white/normal/${POKEMON[id-1].name}.png`;
+}
+function spriteUrlFallback(id) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
+function handleImgError(img, id, attempt) {
+  attempt = attempt || 1;
+  if (attempt === 1) img.src = spriteUrlFallback(id);
+  img.setAttribute('data-attempt', attempt + 1);
+  if (attempt < 2) img.onerror = function(){ handleImgError(this, id, attempt + 1); };
+  else img.onerror = null;
+}
+
+function pad(n) { return String(n).padStart(3, '0'); }
+
+// ── STATE ──
+let caught = new Set(JSON.parse(localStorage.getItem('pokedex_caught') || '[]'));
+let currentFilter = 'all';
+let currentView = 'grid';
+let modalPokemon = null;
+
+function toggleCatch(id, e) {
+  e.stopPropagation();
+  const wasCaught = caught.has(id);
+  if (wasCaught) { caught.delete(id); showToast(POKEMON[id-1].name + ' eliminado'); }
+  else { caught.add(id); showToast('¡' + POKEMON[id-1].name + ' capturado!'); }
+  save();
+  // Update card in place
+  const card = document.querySelector('[data-id="' + id + '"]');
+  if (card) {
+    card.classList.toggle('caught', !wasCaught);
+    const btn = card.querySelector('.check-btn');
+    if (btn) btn.textContent = wasCaught ? '○' : '✓';
+  }
+  if (modalPokemon && modalPokemon.id === id) updateCatchBtn(!wasCaught);
+}
+
+function save() {
+  localStorage.setItem('pokedex_caught', JSON.stringify([...caught]));
+  updateStats();
+}
+
+function updateStats() {
+  const c = caught.size;
+  document.getElementById('caught-display').textContent = c;
+  document.getElementById('progress-fill').style.width = (c / 649 * 100) + '%';
+}
+
+function setView(v) {
+  currentView = v;
+  const grid = document.getElementById('pokemon-grid');
+  grid.className = 'pokemon-grid' + (v === 'list' ? ' list-view' : '');
+  document.getElementById('grid-btn').className = 'view-btn' + (v === 'grid' ? ' active' : '');
+  document.getElementById('list-btn').className = 'view-btn' + (v === 'list' ? ' active' : '');
+  renderList();
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'gen-active'));
+  if (f.startsWith('gen')) el.classList.add('gen-active');
+  else el.classList.add('active');
+  renderList();
+}
+
+// Fuzzy: letters must appear in order within the name
+function fuzzyMatch(name, query) {
+  if (!query) return true;
+  query = query.toLowerCase();
+  name = name.toLowerCase().replace(/-/g, '');
+  if (name.includes(query)) return true;
+  if (query.length >= 2) {
+    let qi = 0;
+    for (let i = 0; i < name.length && qi < query.length; i++) {
+      if (name[i] === query[qi]) qi++;
+    }
+    if (qi === query.length) return true;
+  }
+  return false;
+}
+
+function getFiltered() {
+  const q = document.getElementById('search-input').value.trim();
+  return POKEMON.filter(p => {
+    if (currentFilter === 'caught' && !caught.has(p.id)) return false;
+    if (currentFilter === 'missing' && caught.has(p.id)) return false;
+    if (currentFilter === 'gen1' && getGen(p.id) !== 1) return false;
+    if (currentFilter === 'gen2' && getGen(p.id) !== 2) return false;
+    if (currentFilter === 'gen3' && getGen(p.id) !== 3) return false;
+    if (currentFilter === 'gen4' && getGen(p.id) !== 4) return false;
+    if (currentFilter === 'gen5' && getGen(p.id) !== 5) return false;
+    if (q) {
+      const matchName = fuzzyMatch(p.name, q);
+      const matchNum = pad(p.id).includes(q) || String(p.id).includes(q);
+      if (!matchName && !matchNum) return false;
+    }
+    return true;
+  });
+}
+
+function renderList() {
+  const filtered = getFiltered();
+  const grid = document.getElementById('pokemon-grid');
+  const showGenDividers = (currentFilter === 'all' || currentFilter.startsWith('gen')) &&
+    !document.getElementById('search-input').value.trim();
+
+  let html = '';
+  let lastGen = null;
+
+  if (filtered.length === 0) {
+    html = `<div class="empty-state">
+      <div class="pixel-text">? ? ?</div>
+      <div style="font-weight:700; color:var(--text-dim)">No encontrado en la Pokédex</div>
+    </div>`;
+  } else {
+    filtered.forEach(p => {
+      const gen = getGen(p.id);
+      if (showGenDividers && gen !== lastGen) {
+        const genData = GENS[gen - 1];
+        const genCaught = [...caught].filter(id => getGen(id) === gen).length;
+        const genTotal = genData.end - genData.start + 1;
+        html += `<div class="gen-divider">
+          <span class="gen-label">${genData.name}</span>
+          <div class="gen-line"></div>
+          <span class="gen-count">${genCaught}/${genTotal}</span>
+        </div>`;
+        lastGen = gen;
+      }
+
+      const isCaught = caught.has(p.id);
+      const typeColor = TYPE_COLORS[p.type1] || '#888';
+
+      if (currentView === 'list') {
+        html += `<div class="poke-card${isCaught ? ' caught' : ''}" data-id="${p.id}" onclick="openModal(${p.id})">
+          <div class="poke-img-wrap">
+            <img class="poke-img" src="${spriteUrl(p.id)}" alt="${p.name}" loading="lazy" onerror="handleImgError(this,${p.id},1)">
+          </div>
+          <div class="card-info">
+            <span class="card-num">#${pad(p.id)}</span>
+            <div class="poke-name">${p.name}</div>
+            <div class="type-tags">
+              <span class="type-tag" style="background:${typeColor}">${p.type1}</span>
+              ${p.type2 ? `<span class="type-tag" style="background:${TYPE_COLORS[p.type2] || '#888'}">${p.type2}</span>` : ''}
+            </div>
+          </div>
+          <button class="check-btn" onclick="toggleCatch(${p.id},event)">${isCaught ? '✓' : '○'}</button>
+        </div>`;
+      } else {
+        html += `<div class="poke-card${isCaught ? ' caught' : ''}" data-id="${p.id}" onclick="openModal(${p.id})">
+          <button class="check-btn" onclick="toggleCatch(${p.id},event)">${isCaught ? '✓' : '○'}</button>
+          <span class="card-num">#${pad(p.id)}</span>
+          <div class="poke-img-wrap">
+            <img class="poke-img" src="${spriteUrl(p.id)}" alt="${p.name}" loading="lazy" onerror="handleImgError(this,${p.id},1)">
+          </div>
+          <div class="poke-name">${p.name}</div>
+          <div class="type-tags">
+            <span class="type-tag" style="background:${typeColor}">${p.type1}</span>
+            ${p.type2 ? `<span class="type-tag" style="background:${TYPE_COLORS[p.type2] || '#888'}">${p.type2}</span>` : ''}
+          </div>
+        </div>`;
+      }
+    });
+  }
+
+  grid.innerHTML = html;
+}
+
+// ── MODAL ──
+function openModal(id) {
+  const p = POKEMON[id - 1];
+  modalPokemon = p;
+  const isCaught = caught.has(p.id);
+  const typeColor = TYPE_COLORS[p.type1];
+
+  document.getElementById('m-num').textContent = `#${pad(p.id)}`;
+  document.getElementById('m-name').textContent = p.name;
+
+  let typesHtml = `<span class="modal-type-tag" style="background:${typeColor}">${p.type1}</span>`;
+  if (p.type2) typesHtml += `<span class="modal-type-tag" style="background:${TYPE_COLORS[p.type2] || '#888'}">${p.type2}</span>`;
+  document.getElementById('m-types').innerHTML = typesHtml;
+
+  document.getElementById('m-img').src = spriteUrl(p.id);
+  document.getElementById('m-img').onerror = function(){ handleImgError(this, p.id, 1); };
+
+  document.getElementById('modal-bg').style.background = `radial-gradient(circle, ${typeColor}, transparent 70%)`;
+
+  updateCatchBtn(isCaught);
+
+  // Stats
+  const statVals = [p.stats.hp, p.stats.atk, p.stats.def, p.stats.spatk, p.stats.spdef, p.stats.spe];
+  const maxStat = 255;
+  let statsHtml = '';
+  statVals.forEach((v, i) => {
+    const pct = Math.round(v / maxStat * 100);
+    statsHtml += `<div class="stat-row">
+      <span class="stat-name">${STAT_NAMES[i]}</span>
+      <span class="stat-val">${v}</span>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar" style="width:${pct}%; background:${STAT_COLORS[i]}"></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('m-stats').innerHTML = statsHtml;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateCatchBtn(isCaught) {
+  const btn = document.getElementById('catch-btn');
+  if (isCaught) {
+    btn.textContent = '✓ Capturado — Quitar';
+    btn.className = 'catch-btn caught';
+  } else {
+    btn.textContent = '◎ Marcar como capturado';
+    btn.className = 'catch-btn not-caught';
+  }
+}
+
+function toggleFromModal() {
+  if (!modalPokemon) return;
+  const id = modalPokemon.id;
+  const wasCaught = caught.has(id);
+  if (wasCaught) { caught.delete(id); showToast(modalPokemon.name + ' eliminado'); }
+  else { caught.add(id); showToast('¡' + modalPokemon.name + ' capturado!'); }
+  save();
+  updateCatchBtn(!wasCaught);
+  const card = document.querySelector('[data-id="' + id + '"]');
+  if (card) {
+    card.classList.toggle('caught', !wasCaught);
+    const btn = card.querySelector('.check-btn');
+    if (btn) btn.textContent = wasCaught ? '○' : '✓';
+  }
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    modalPokemon = null;
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function confirmReset() {
+  if (confirm('¿Reiniciar todo el progreso? No se puede deshacer.')) {
+    caught.clear();
+    save();
+    renderList();
+    showToast('Progreso reiniciado');
+  }
+}
+
+// ── INIT ──
+updateStats();
+renderList();
+</script>
+</body>
+</html>
